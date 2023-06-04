@@ -107,6 +107,7 @@
             this.Name = "StartMenu";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Авторизация";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.StartMenu_FormClosing);
             this.Load += new System.EventHandler(this.StartMenu_Load);
             this.ResumeLayout(false);
             this.PerformLayout();

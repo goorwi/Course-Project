@@ -60,6 +60,7 @@
             this.nameTextBox.Name = "nameTextBox";
             this.nameTextBox.Size = new System.Drawing.Size(180, 20);
             this.nameTextBox.TabIndex = 1;
+            this.nameTextBox.TextChanged += new System.EventHandler(this.nameTextBox_TextChanged);
             // 
             // createButton
             // 
@@ -82,7 +83,8 @@
             this.Controls.Add(this.label3);
             this.Controls.Add(this.label1);
             this.Name = "addNewPassenger";
-            this.Text = "addNewPassenger";
+            this.Text = "Создание новой записи";
+            this.Load += new System.EventHandler(this.addNewPassenger_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 

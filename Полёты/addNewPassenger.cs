@@ -13,27 +13,36 @@ namespace Полёты
 {
     public partial class addNewPassenger : Form
     {
+        CreateForm _cf;
         DataBase dataBase = new DataBase();
-        public addNewPassenger()
+        public addNewPassenger(CreateForm cf)
         {
             InitializeComponent();
             this.StartPosition = FormStartPosition.CenterScreen;
+            _cf = cf;
         }
 
         private void createButton_Click(object sender, EventArgs e)
         {
-            dataBase.OpenConnection();
-
+            var table = "";
             var name = nameTextBox.Text;
-
-            var addQuery = $"insert into Passenger (name) values('{name}')";
-            var command = new SqlCommand(addQuery, dataBase.GetConnection());
-
-            command.ExecuteNonQuery();
-
-            MessageBox.Show("Запись успешно добавлена!");
-
-            dataBase.CloseConnection();
+            switch (_cf)
+            {
+                case CreateForm.Pass: table = "Passenger"; break;
+                case CreateForm.Comp: table = "Company"; break;
+            }
+            dataBase.CreateNewPassenger(table, name, _cf);
+        }
+        private void addNewPassenger_Load(object sender, EventArgs e)
+        {
+            if (_cf == CreateForm.Comp)
+                label1.Text = "Создание записи:\nКомпания";
+        }
+        private void nameTextBox_TextChanged(object sender, EventArgs e)
+        {
+            for (int i = 0; i < nameTextBox.Text.Length; i++)
+                if (char.IsDigit(nameTextBox.Text[i]))
+                    nameTextBox.Text = nameTextBox.Text.Remove(i, 1);
         }
     }
 }

@@ -18,7 +18,6 @@ namespace Полёты
         public StartMenu()
         {
             InitializeComponent();
-
         }
 
         private void StartMenu_Load(object sender, EventArgs e)
@@ -37,33 +36,34 @@ namespace Полёты
             string log = login.Text;
             string pass = password.Text;
 
-            SqlDataAdapter adapter = new SqlDataAdapter();
-            DataTable table = new DataTable();
-
-            string quaryString = $"select id_user, login_user, password_user from register where login_user = '{log}' and password_user = '{pass}'";
-
-            SqlCommand command = new SqlCommand(quaryString, dataBase.GetConnection());
-
-            adapter.SelectCommand = command;
-            adapter.Fill(table);
-
-            if (table.Rows.Count == 1) 
+            DataTable table = dataBase.GetUsers(log, pass);
+            try
             {
-                MessageBox.Show("Успешная авторизация!");
-                DB dB = new DB();
-                this.Hide();
-                dB.ShowDialog();
+                if (table.Rows.Count == 1)
+                {
+                    var user = new checkUser(table.Rows[0].ItemArray[1].ToString(), Convert.ToBoolean(table.Rows[0].ItemArray[3]));
+
+                    MessageBox.Show("Успешная авторизация!");
+                    DB dB = new DB(user);
+                    this.Hide();
+                    dB.ShowDialog();
+                }
             }
-            else { MessageBox.Show("Произошла ошибка!"); }
-
-            dataBase.GetConnection();
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+            }
         }
-
         private void newUser_link_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             sign_up su = new sign_up();
             this.Hide();
             su.ShowDialog();
+            
+        }
+        private void StartMenu_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            Application.Exit();
         }
     }
 }

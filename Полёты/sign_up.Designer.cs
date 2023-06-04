@@ -93,7 +93,9 @@
             this.Controls.Add(this.login);
             this.Controls.Add(this.log_in_label);
             this.Name = "sign_up";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Регистрация";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.sign_up_FormClosing);
             this.Load += new System.EventHandler(this.sign_up_Load);
             this.ResumeLayout(false);
             this.PerformLayout();

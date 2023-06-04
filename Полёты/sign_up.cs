@@ -27,6 +27,7 @@ namespace Полёты
             password.PasswordChar = '*';
             login.MaxLength = 50;
             password.MaxLength = 50;
+            
         }
 
         private void create_button_Click(object sender, EventArgs e)
@@ -36,25 +37,19 @@ namespace Полёты
                 string log = login.Text;
                 string pass = password.Text;
 
-                SqlDataAdapter adapter = new SqlDataAdapter();
-                DataTable table = new DataTable();
-
-                string quaryString = $"insert into register(login_user, password_user) values('{log}', '{pass}')";
-
-                SqlCommand command = new SqlCommand(quaryString, dataBase.GetConnection());
-
-                dataBase.OpenConnection();
-
-                if (command.ExecuteNonQuery() == 1)
+                try
                 {
+                    dataBase.CreateNewUser(log, pass);
+
                     MessageBox.Show("Аккаунт успешно зарегистрирован!");
                     StartMenu s = new StartMenu();
                     this.Hide();
                     s.ShowDialog();
                 }
-                else MessageBox.Show("Аккаунт не создан!");
-
-                dataBase.CloseConnection();
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Аккаунт не создан!\n" + ex.Message);
+                }
             }
         }
 
@@ -63,18 +58,15 @@ namespace Полёты
             string log = login.Text;
             string pass = password.Text;
 
-            SqlDataAdapter adapter = new SqlDataAdapter();
-            DataTable table = new DataTable();
-
-            string quaryString = $"select id_user, login_user, password_user from register where login_user = '{log}' and password_user = '{pass}'";
-
-            SqlCommand command = new SqlCommand(quaryString, dataBase.GetConnection());
-
-            adapter.SelectCommand = command;
-            adapter.Fill(table);
+            DataTable table = dataBase.GetUsers(log, pass);
 
             if (table.Rows.Count > 0) { MessageBox.Show("Пользователь уже существует!"); return false; }
             else return true;
+        }
+
+        private void sign_up_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            Application.Exit();
         }
     }
 }
