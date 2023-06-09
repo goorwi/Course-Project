@@ -5,11 +5,12 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using NUnit.Framework;
 using System.Data.SqlClient;
 using System.Transactions;
 using System.IO;
-using NUnit.Framework;
 using Moq;
+using System.Windows.Forms;
 
 namespace Полёты
 {
@@ -17,14 +18,13 @@ namespace Полёты
     class IntegrationTestDataBase
     {
         DataBase db;
-        SqlConnection sc = new SqlConnection(@"Data Source=ВЛАДИСЛАВ-ПК\SQLEXPRESS;Initial Catalog=aero;Integrated Security=True");
         TransactionScope scope;
 
         [SetUp]
         public void SetUp()
         {
             scope = new TransactionScope();
-
+            
             db = new DataBase();
             db.OpenConnection();
         }
@@ -36,8 +36,7 @@ namespace Полёты
         }
 
 
-        [TestCase("1", "admin","admin", true)]
-        [TestCase("2", "user", "user", false)]
+        [TestCase("10", "log", "pass", false)]
         public void TestGetUsers(int id, string login, string password, bool isAdmin)
         {
             DataTable expected = new DataTable();
@@ -45,12 +44,17 @@ namespace Полёты
             DataRow r = expected.NewRow();
             r[0] = id; r[1] = login; r[2] = password;r[3] = isAdmin;
             expected.Rows.Add(r);
+            var command = new SqlCommand($"insert into Register (login_user, password_user, is_admin) " +
+                $"values ('{login}','{password}',0)",db.GetConnection());
+            command.ExecuteNonQuery();
 
             DataTable actual = db.GetUsers(login, password);
-            Assert.AreEqual(expected.Rows[0].ItemArray[0], actual.Rows[0].ItemArray[0].ToString().Trim());
-            Assert.AreEqual(expected.Rows[0].ItemArray[1], actual.Rows[0].ItemArray[1].ToString().Trim());
-            Assert.AreEqual(expected.Rows[0].ItemArray[2], actual.Rows[0].ItemArray[2].ToString().Trim());
-            Assert.AreEqual(expected.Rows[0].ItemArray[3], actual.Rows[0].ItemArray[3].ToString().Trim());
+            Assert.AreEqual(expected.Rows[0].ItemArray[1], 
+                actual.Rows[0].ItemArray[1].ToString().Trim());
+            Assert.AreEqual(expected.Rows[0].ItemArray[2], 
+                actual.Rows[0].ItemArray[2].ToString().Trim());
+            Assert.AreEqual(expected.Rows[0].ItemArray[3], 
+                actual.Rows[0].ItemArray[3].ToString().Trim());
         }
         [Test]
         public void TestOpenConnection()
@@ -61,12 +65,134 @@ namespace Полёты
         public void TestCloseConnection()
         {
             db.GetConnection().Close();
-            Assert.AreEqual(ConnectionState.Closed, db.GetConnection().State);
+            Assert.AreEqual(ConnectionState.Closed, db.GetConnection().State);                
         }
-        [TestCase("")]
-        public void TestReadPassengers(string s)
+        [TestCase("Kierry L.D.", "Kier")]
+        public void TestReadPassengers(string inputTxt, string strSearch)
         {
-            Assert.IsNotNull(db.ReadPassengers(s));
+            //подготовка данных
+            SqlCommand command = new SqlCommand("insert into Passenger (name) values ('Kierry L.D.')", db.GetConnection());
+            command.ExecuteNonQuery();
+            var adapter = new SqlDataAdapter($"select ID_psg from Passenger where name = '{inputTxt}'", db.GetConnection());
+            var dataTable = new DataTable();
+            adapter.Fill(dataTable);
+            string id = dataTable.Rows[0].ItemArray[0].ToString();
+            strSearch = $"{id}{strSearch}";
+
+            command.CommandText = $"select * from Passenger where concat (ID_psg, name) like '%{strSearch}%'";
+            SqlDataReader reader = command.ExecuteReader();
+            var expected = new object[reader.FieldCount];
+            reader.Read();
+            reader.GetValues(expected);
+            reader.Close();
+
+            //act
+            reader = db.ReadPassengers(strSearch);
+            var actual = new object[reader.FieldCount];
+            reader.Read();
+            reader.GetValues(actual);
+            reader.Close();
+
+            Assert.AreEqual(expected, actual);
+        }
+        [TestCase("Ladgor", "Lad")]
+        public void TestReadCompanies(string inputTxt, string strSearch)
+        {
+            //подготовка данных
+            SqlCommand command = new SqlCommand($"insert into Company (name) values ('{inputTxt}')", db.GetConnection());
+            command.ExecuteNonQuery();
+            var adapter = new SqlDataAdapter($"select ID_comp from Company where name = '{inputTxt}'", db.GetConnection());
+            var dataTable = new DataTable();
+            adapter.Fill(dataTable);
+            string id = dataTable.Rows[0].ItemArray[0].ToString();
+            strSearch = $"{id}{strSearch}";
+
+            command.CommandText = $"select * from Company where concat (ID_comp, name) like '%{strSearch}%'";
+            SqlDataReader reader = command.ExecuteReader();
+            var expected = new object[reader.FieldCount];
+            reader.Read();
+            reader.GetValues(expected);
+            reader.Close();
+
+            //act
+            reader = db.ReadCompanies(strSearch);
+            var actual = new object[reader.FieldCount];
+            reader.Read();
+            reader.GetValues(actual);
+            reader.Close();
+
+            Assert.AreEqual(expected, actual);
+        }
+        [TestCase("5465", null, "Boeing", "London", "Washington", "10.10.2010", "11.10.2010", "wash")]
+        public void TestReadTrips(string tripNo, string idComp, string plane, string townFrom, string townTo, string timeOut, string timeIn, string strSearch)
+        {
+            //подготовка данных
+            var command = new SqlCommand($"insert into Company(name) values ('Ladrog')", db.GetConnection());
+            command.ExecuteNonQuery();
+            var adapter = new SqlDataAdapter();
+            adapter.SelectCommand = new SqlCommand("select ID_comp from Company where name = 'Ladrog'", db.GetConnection());
+            var table = new DataTable();
+            adapter.Fill(table);
+            idComp = table.Rows[0].ItemArray[0].ToString();
+            command.CommandText = $"insert into Trip (trip_no, ID_comp, plane, town_from, town_to, time_out, time_in) values('{tripNo}','{idComp}','{plane}','{townFrom}','{townTo}','{timeOut}','{timeIn}')";
+            command.ExecuteNonQuery();
+
+            command.CommandText = $"select * from Trip where concat (trip_no, ID_comp, plane, town_from, town_to, time_out, time_in) like '%" + strSearch + "%'";
+            SqlDataReader reader = command.ExecuteReader();
+            var expected = new object[reader.FieldCount];
+            reader.Read();
+            reader.GetValues(expected);
+            reader.Close();
+
+            //act
+            reader = db.ReadTrips(strSearch);
+            var actual = new object[reader.FieldCount];
+            reader.Read();
+            reader.GetValues(actual);
+            reader.Close();
+
+            Assert.AreEqual(expected, actual);
+        }
+        [TestCase("4568", "10.10.2010", "9f", "9f")]
+        public void TestReadPass_in_trips(string num, string date, string place, string strSearch)
+        {
+            //подготовка данных
+            var command = new SqlCommand($"insert into Company(name) values ('Ladgor')", db.GetConnection());
+            command.ExecuteNonQuery();
+            var adapter = new SqlDataAdapter();
+            adapter.SelectCommand = new SqlCommand("select ID_comp from Company where name = 'Ladgor'", db.GetConnection());
+            var table = new DataTable();
+            adapter.Fill(table);
+            var id = table.Rows[0].ItemArray[0].ToString();
+            command.CommandText = $"insert into Trip (trip_no, ID_comp, plane, town_from, town_to, time_out, time_in) values('{num}',{id},'Harold','London','Washington','10.10.2010','11.10.2010')";
+            command.ExecuteNonQuery();
+            command.CommandText = "insert into Passenger(name) values ('Kidow L.A.')";
+            command.ExecuteNonQuery();
+            adapter.SelectCommand = new SqlCommand("select ID_psg from Passenger where name = 'Kidow L.A.'", db.GetConnection());
+            table = new DataTable();
+            adapter.Fill(table);
+            id = table.Rows[0].ItemArray[0].ToString();
+
+            command.CommandText = $"insert into Pass_in_trip (trip_no, date, ID_psg, place) values('{num}', '{date}', '{id}', '{place}')";
+            command.ExecuteNonQuery();
+
+            strSearch = $"{id}{strSearch}";
+
+            command.CommandText = $"select * from Pass_in_trip where concat (trip_no, date, ID_psg, place) like '%{strSearch}%'";
+            SqlDataReader reader = command.ExecuteReader();
+            var expected = new object[reader.FieldCount];
+            reader.Read();
+            reader.GetValues(expected);
+            reader.Close();
+
+            //act
+            reader = db.ReadPiT(strSearch);
+            var actual = new object[reader.FieldCount];
+            reader.Read();
+            reader.GetValues(actual);
+            reader.Close();
+
+            Assert.AreEqual(expected, actual);
         }
 
         [TestCase("vlad", "vlad")]
@@ -75,7 +201,8 @@ namespace Полёты
             db.CreateNewUser(login, password);
 
             var table = new DataTable();
-            var command = new SqlCommand($"select login_user, password_user from Register where login_user = '{login}' and password_user = '{password}'", db.GetConnection());
+            var command = new SqlCommand($"select login_user, password_user from Register " +
+                $"where login_user = '{login}' and password_user = '{password}'", db.GetConnection());
             var adapter = new SqlDataAdapter();
             adapter.SelectCommand = command;
             adapter.Fill(table);
@@ -89,7 +216,7 @@ namespace Полёты
         public void TestCreateNewPassenger(string table, string name, CreateForm _cf)
         {
             db.CreateNewPassenger(table, name, _cf);
-            
+
             var dataTable = new DataTable();
             var command = new SqlCommand($"select name from {table} where name = '{name}'", db.GetConnection());
             var adapter = new SqlDataAdapter();
@@ -98,7 +225,6 @@ namespace Полёты
 
             Assert.AreEqual(1, dataTable.Rows.Count);
             Assert.AreEqual(name, dataTable.Rows[0].ItemArray[0].ToString().Trim());
-
         }
         [TestCase("Kidom L.D.")]
         public void TestExecuteCommandQuery(string name)
@@ -207,6 +333,7 @@ namespace Полёты
             Assert.AreEqual(townFrom, table.Rows[0].ItemArray[4].ToString().Trim());
             Assert.AreEqual(DateTime.Parse(timeOut), DateTime.Parse(table.Rows[0].ItemArray[5].ToString().Trim()));
             Assert.AreEqual(DateTime.Parse(timeIn), DateTime.Parse(table.Rows[0].ItemArray[6].ToString().Trim()));
+          
         }
         [TestCase("Kidow J.L.", RowState.Deleted)]
         public void TestDeletePassenger(string name, RowState _rw)
@@ -226,10 +353,12 @@ namespace Полёты
             adapter.Fill(table);
 
             Assert.AreEqual(0, table.Rows.Count);
+            
         }
         [TestCase("Kidow J.L.", "Kidow S.A.", RowState.Modified)]
         public void TestUpdatePassenger(string name, string newName, RowState _rw)
         {
+            
             var command = new SqlCommand($"insert into Passenger(name) values ('{name}')", db.GetConnection());
             command.ExecuteNonQuery();
 
@@ -245,10 +374,12 @@ namespace Полёты
             adapter.Fill(table);
 
             Assert.AreEqual(newName, table.Rows[0].ItemArray[0].ToString().Trim());
+            
         }
         [TestCase("Langrod", RowState.Deleted)]
         public void TestDeleteCompany(string name, RowState _rw)
         {
+            
             var command = new SqlCommand($"insert into Company(name) values ('{name}')", db.GetConnection());
             command.ExecuteNonQuery();
 
@@ -264,10 +395,12 @@ namespace Полёты
             adapter.Fill(table);
 
             Assert.AreEqual(0, table.Rows.Count);
+            
         }
         [TestCase("Langrod", "Ladgrove", RowState.Modified)]
         public void TestUpdateCompany(string name, string newName, RowState _rw)
         {
+            
             var command = new SqlCommand($"insert into Company(name) values ('{name}')", db.GetConnection());
             command.ExecuteNonQuery();
 
@@ -287,6 +420,7 @@ namespace Полёты
         [TestCase("5465", null, "Boeing", "London", "Washington", "10.10.2010", "11.10.2010", RowState.Deleted)]
         public void TestDeleteTrip(string tripNo, string idComp, string plane, string townFrom, string townTo, string timeOut, string timeIn, RowState _rw)
         {
+            
             var command = new SqlCommand($"insert into Company(name) values ('Ladrog')", db.GetConnection());
             command.ExecuteNonQuery();
             var adapter = new SqlDataAdapter();
@@ -305,10 +439,12 @@ namespace Полёты
             adapter.Fill(table);
 
             Assert.AreEqual(0, table.Rows.Count);
+            
         }
         [TestCase("5465", null, "Boeing", "London", "Washington", "10.10.2010", "11.10.2010", RowState.Modified, "Moscow", "09.10.2010", "10.10.2010")]
         public void TestUpdateTrip(string tripNo, string idComp, string plane, string townFrom, string townTo, string timeOut, string timeIn, RowState _rw, string newTownFrom, string newTimeOut, string newTimeIn)
         {
+            
             var command = new SqlCommand($"insert into Company(name) values ('Ladrog')", db.GetConnection());
             command.ExecuteNonQuery();
             var adapter = new SqlDataAdapter();
@@ -401,6 +537,5 @@ namespace Полёты
             Assert.AreEqual(DateTime.Parse(date), DateTime.Parse(table.Rows[0].ItemArray[2].ToString().Trim()));
             Assert.AreEqual(newPlace, table.Rows[0].ItemArray[3].ToString().Trim());
         }
-
     }
 }

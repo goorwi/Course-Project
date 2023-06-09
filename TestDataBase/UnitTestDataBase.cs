@@ -1,5 +1,6 @@
 ﻿using System;
 using NUnit.Framework;
+using Moq;
 
 namespace Полёты
 {
@@ -32,7 +33,7 @@ namespace Полёты
             Assert.AreEqual("select * from Pass_in_trip where concat (trip_no, date, ID_psg, place) like '%V.%'", db.QueryReadPiT(s));
         }
 
-        [TestCase("Passenger","Kireev D.A.")]
+        [TestCase("Passenger", "Kireev D.A.")]
         [TestCase("Company", "Kireev D.A.")]
         public void TestQueryAdd(string table, string name)
         {
@@ -111,7 +112,7 @@ namespace Полёты
         [TestCase("admin", "admin")]
         public void TestAddNewUser(string login, string password)
         {
-            Assert.AreEqual($"insert into register(login_user, password_user, is_admin) values('{login}', '{password}', 0)", db.QueryNewUser(login, password));
+            Assert.AreEqual($"insert into Register(login_user, password_user, is_admin) values('{login}', '{password}', 0)", db.QueryNewUser(login, password));
         }
 
         [TestCase(null, null)]

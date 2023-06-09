@@ -195,7 +195,7 @@ namespace Полёты
         {
             SqlCommand command = new SqlCommand(QueryReadPass(s), GetConnection());
 
-            return command.ExecuteReader(); 
+            return command.ExecuteReader();
         }
         public string QueryDeletePass(string id) => (id == null) ? null : $"delete from Passenger where ID_psg = '{id}'";
         public string QueryUpdatePass(string name, string id) => (name == null || id == null) ? null : $"update Passenger set name = '{name}' where ID_psg = '{id}'";
